@@ -300,4 +300,6 @@ install_opencode_plugin() {
 
 install_claude_hooks
 install_cursor_hooks
-install_opencode_plugin
+if [ "$(tmux show-option -gqv @assistant-resurrect-opencode)" != 'off' ]; then
+    install_opencode_plugin
+fi

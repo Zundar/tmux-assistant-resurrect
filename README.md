@@ -643,6 +643,15 @@ set -g @assistant-resurrect-relaunch 'off'
 set -g @assistant-resurrect-relaunch-allow-file '/path/to/assistant-relaunch-allow.txt'
 ```
 
+To skip installing the legacy OpenCode session tracker (for example, while
+using OpenCode V2), set `@assistant-resurrect-opencode off` before TPM loads
+this plugin. The default is `on`; this option does not remove an existing
+`~/.config/opencode/plugins/session-tracker.js` symlink. Remove it only after
+confirming that it points to this plugin's `hooks/opencode-session-track.js`.
+Claude, Cursor, and tmux-resurrect hooks remain enabled. After a compatible
+tracker is available, remove the option (or set it to `on`) and start tmux
+again to reinstall the link.
+
 ### PATH in restricted environments (NixOS, systemd services)
 
 When tmux runs as a systemd user service, the server inherits a stripped-down

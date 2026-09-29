@@ -109,6 +109,35 @@ else
 fi
 assert_file_mode "new Cursor hooks config is private" 600 "$INSTALL_HOME/.cursor/hooks.json"
 
+# OpenCode opt-out skips only its installer; default and explicit on retain the
+# legacy symlink. Re-running off must not recreate a removed owner link.
+opencode_link="$INSTALL_HOME/.config/opencode/plugins/session-tracker.js"
+assert_eq "OpenCode default installs tracker" "$QUOTED_PLUGIN/hooks/opencode-session-track.js" "$(readlink "$opencode_link")"
+rm "$opencode_link"
+HOME="$INSTALL_HOME" FAKE_TMUX_OPTION=on PATH="$FAKE_BIN:$PATH" \
+    "$UNDER_TEST" "$ROOT_DIR/tmux-assistant-resurrect.tmux"
+assert_eq "OpenCode explicit on restores tracker" "$ROOT_DIR/hooks/opencode-session-track.js" "$(readlink "$opencode_link")"
+rm "$opencode_link"
+HOME="$INSTALL_HOME" FAKE_TMUX_OPTION=off PATH="$FAKE_BIN:$PATH" \
+    "$UNDER_TEST" "$ROOT_DIR/tmux-assistant-resurrect.tmux"
+HOME="$INSTALL_HOME" FAKE_TMUX_OPTION=off PATH="$FAKE_BIN:$PATH" \
+    "$UNDER_TEST" "$ROOT_DIR/tmux-assistant-resurrect.tmux"
+if [ ! -e "$opencode_link" ] && [ ! -L "$opencode_link" ]; then
+    pass "OpenCode off does not recreate tracker on repeat startup"
+else
+    fail "OpenCode off does not recreate tracker on repeat startup"
+fi
+assert_eq "Claude hooks remain with OpenCode off" 1 \
+    "$(jq '[.hooks.SessionStart[]?.hooks[]? | select((.command // "") | contains("claude-session-track"))] | length' "$INSTALL_HOME/.claude/settings.json")"
+assert_eq "Cursor hooks remain with OpenCode off" 1 \
+    "$(jq '[.hooks.sessionStart[]? | select((.command // "") | contains("cursor-session-track"))] | length' "$INSTALL_HOME/.cursor/hooks.json")"
+if grep -q '@resurrect-hook-post-save-all' "$TMUX_CALLS" &&
+    grep -q '@resurrect-hook-post-restore-all' "$TMUX_CALLS"; then
+    pass "resurrect hooks remain with OpenCode off"
+else
+    fail "resurrect hooks remain with OpenCode off"
+fi
+
 # Cursor documents its global hook file at ~/.cursor/hooks.json. A desktop's
 # unrelated XDG_CONFIG_HOME must not redirect the integration to an unread path.
 XDG_HOME="$TEST_ROOT/xdg"
